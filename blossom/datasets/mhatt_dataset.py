@@ -48,7 +48,7 @@ class MHAttDataset(Dataset):
         
         return x
 
-def _collate_fb(batch):
+def _collate_fn(batch):
     inputs = [s[0] for s in batch]
     targets = [s[1] for s in batch]
 

@@ -1,1 +1,1 @@
-from .mhatt_dataset import MHAttDataset
+from .mhatt_dataset import MHAttDataset, _collate_fn
