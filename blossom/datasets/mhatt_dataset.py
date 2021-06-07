@@ -6,22 +6,22 @@ import numpy as np
 from typing import List, Union, Any
 from torch.utils.data.dataset import Dataset
 
-path = './data/v2.12'
-
-CLASSES = []
-for _, dir, _ in os.walk(path):
-    CLASSES = dir
-    break
-
-print(CLASSES)
 
 class MHAttDataset(Dataset):
-    def __init__(self, mode: str='train', root: str=path, classes: List=None) -> None:
+    def __init__(self, mode: str='train', root: str=None, classes: List=None) -> None:
         super(MHAttDataset, self).__init__()
 
         self.root = os.path.join(root, mode)
         self.data = list()
-        self.classes = classes if classes else CLASSES
+
+        if classes:
+            self.classes = classes
+        else:
+            self.classes = []
+            for _, dir, _ in os.walk(self.root):
+                self.classes = dir
+                break
+
         self.prep_dataset()
 
     def prep_dataset(self):
@@ -61,7 +61,7 @@ def _collate_fn(batch):
 
     temp = torch.zeros(B, F, max_len)
     for x in range(B):
-        temp[x, :, :input[x].size(1)] = inputs[x]
+        temp[x, :, :inputs[x].size(1)] = inputs[x]
 
     inputs = temp.unsqueeze(1)
     targets = torch.LongTensor(targets)

@@ -9,11 +9,15 @@ def test_train():
 
     train_dataset = MHAttDataset(
         mode='train',
-        root='./data/v2.12'
+        root='./data/trigger/processed'
+    )
+    valid_dataset = MHAttDataset(
+        mode='valid',
+        root='./data/trigger/processed'
     )
     test_dataset = MHAttDataset(
         mode='test',
-        root='./data/v2.12'
+        root='./data/trigger/processed'
     )
 
     model = MHAttKWS(
@@ -40,3 +44,5 @@ def test_train():
         save_path='./models',
         model_name='mhatt_model'
     )
+    
+test_train()

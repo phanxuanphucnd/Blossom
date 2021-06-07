@@ -1,0 +1,4 @@
+librosa<0.8
+numba==0.48
+torch~=1.7.1
+numpy
