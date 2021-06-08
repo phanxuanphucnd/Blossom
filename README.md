@@ -2,8 +2,8 @@
 
 1. [Introduction](#introduction)
 2. [How to use `Blossom`](#how_to_use)
-    2.1 [Installation](#installation)
-    2.2 [Example usage](#usage)
+    - [Installation](#installation)
+    - [Example usage](#usage)
 
 3. [Reference](#reference)
 
