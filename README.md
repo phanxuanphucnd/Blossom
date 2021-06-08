@@ -60,7 +60,6 @@ data
 ```py
 
 import os
-from blossom import learners
 
 from blossom.models import MHAttKWS
 from blossom.datasets import MHAttDataset
