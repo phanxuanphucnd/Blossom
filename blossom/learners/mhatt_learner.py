@@ -228,10 +228,12 @@ class MHAttKWSLearner():
         if self.model_type == 'multi_class':
             pred = output.data.max(1, keepdim=True)[1]
         else:
-            pred = torch.sigmoid(output) >= 0.5
+            pred = torch.sigmoid(output)
+            pred = pred[:, -1]
+            pred = pred.view(-1).data.cpu().numpy()[0]
 
-        print('PRED : ', pred)
-        return pred
+        return (pred, self.idx2label.get(int(pred >= 0.5)))
+
 
     def load_model(self, model_path):
         """Load the pretrained model
@@ -252,6 +254,7 @@ class MHAttKWSLearner():
 
 def get_build_criterion(model_type):
     return get_from_registry(model_type, criterion_registry)
+
 
 criterion_registry = {
     'binary': nn.BCEWithLogitsLoss(),
