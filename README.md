@@ -3,6 +3,7 @@
 1. [Introduction](#introduction)
 2. [How to use `Blossom`](#how_to_use)
     - [Installation](#installation)
+    - [Data structure](#data_structure)
     - [Example usage](#usage)
 
 3. [Reference](#reference)
@@ -29,6 +30,30 @@ Blossom is a library for Wake-up word detection problem use Multihead attention 
 
 ```
 
+### <a name='data_structrue'></> Data Structure
+
+```
+data
+    trigger
+        train
+            right
+                right_1.wav
+                right_2.wav
+                ...
+            
+            on
+                on_1.wav
+                on_2.wav
+                ...
+
+            ...
+
+        valid
+
+        test
+
+```
+
 ### <a name='usage'></a> Example usage
 
 
@@ -45,15 +70,15 @@ def test_train():
 
     train_dataset = MHAttDataset(
         mode='train',
-        root='./data/trigger/processed'
+        root='./data/trigger'
     )
     valid_dataset = MHAttDataset(
         mode='valid',
-        root='./data/trigger/processed'
+        root='./data/trigger'
     )
     test_dataset = MHAttDataset(
         mode='test',
-        root='./data/trigger/processed'
+        root='./data/trigger'
     )
 
     model = MHAttKWS(
@@ -96,7 +121,7 @@ def test_inference():
     learner = MHAttKWSLearner(model=model)
     learner.load_model(model_path='./models/mhatt_model.pt')
 
-    output = learner.inference(input='data/trigger/processed/test/active/5c8af87a_nohash_3.wav')
+    output = learner.inference(input='data/trigger/test/on/5c8af87a_nohash_3.wav')
 
     print(output)
 
@@ -113,3 +138,8 @@ test_inference()
 
 2. Oleg Rybakov, Natasha Kononenko, Niranjan Subrahmanya, Mirko Visontai and Stella Laurenzo: “[Streaming keyword spotting on mobile devices](https://arxiv.org/abs/2005.06720)”, in arXiv:2005.06720, 2020.
 
+
+
+
+
+_(To request sample data for experiment. Please contact by email phanxuanphucnd@gmail. )_
