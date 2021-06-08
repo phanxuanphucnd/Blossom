@@ -41,7 +41,7 @@ class MHAttKWS(nn.Module):
             nn.Linear(1024, 64),
             nn.ReLU(True),
             nn.Linear(64, 32),
-            nn.Linear(32, self.num_classes)
+            nn.Linear(32, output_dim)
         )
         
     def forward(self, x):

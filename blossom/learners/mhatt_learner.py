@@ -2,13 +2,14 @@ import os
 import torch
 import logging
 import numpy as np
-
+import torch.nn as nn
 
 from tqdm import tqdm
-from typing import Union, Tuple
+from typing import Any, Union, Tuple
 from torch.utils.data import DataLoader
 
 from blossom.models import MHAttKWS
+from blossom.utils.data_util import *
 from blossom.utils.print_util import *
 from blossom.datasets import MHAttDataset, _collate_fn
 
@@ -23,6 +24,8 @@ class MHAttKWSLearner():
         super(MHAttKWSLearner, self).__init__()
 
         self.model = model
+        self.num_classes = self.model.num_classes
+        
         if not device:
             self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         else:
@@ -33,7 +36,7 @@ class MHAttKWSLearner():
         train_dataloader,
         optimizer,
         criterion,
-        epoch
+        model_type='binary'
     ):
         self.model.train()
 
@@ -42,30 +45,40 @@ class MHAttKWSLearner():
         correct = 0
         
         # logging.info(f"[Training]Training start")
-        for batch in tqdm(train_dataloader):
-            x, y = batch
+        for item in tqdm(train_dataloader):
+            x, y = item
             x = x.to(self.device)
-            y = y.to(self.device)
-
-
+            y = y.to(self.device).float()
+            
             optimizer.zero_grad()
 
-            logits = self.model(x)
-            loss = criterion(logits, y)
+            output = self.model(x).squeeze(-1) if model_type == 'binary' else self.model(x)
+
+            loss = criterion(output, y)
+            loss.backward()
+            optimizer.step()
             
             train_loss.append(loss.item())
             total_sample += y.size(0)
 
-            pred = logits.data.max(1, keepdim=True)[1]
-            correct += pred.eq(y.data.view_as(pred)).sum()
-
-            loss.backward()
-            optimizer.step()
+            if type == 'multi_class':
+                pred = output.data.max(1, keepdim=True)[1]
+                correct += pred.eq(y.data.view_as(pred)).sum()
+            else:
+                pred = (torch.sigmoid(output) >= 0.5).long()
+                correct += (pred == y).sum().item()
            
         loss = np.mean(train_loss)
         acc = correct / total_sample
 
         return loss, acc
+    
+    def _validate(
+        self,
+        valid_dataloader,
+        criterion=None
+    ):
+        self.model.eval()
 
 
     def train(
@@ -94,8 +107,15 @@ class MHAttKWSLearner():
             pin_memory=True, collate_fn=_collate_fn, num_workers=num_workers
         )
 
+        if self.num_classes == 2:
+            model_type = 'binary'
+        else:
+            model_type = 'multi_class'
+
+        self.classes = train_dataset.classes
+
+        criterion = get_build_criterion(model_type=model_type)
         optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
-        criterion = torch.nn.CrossEntropyLoss()
 
         criterion.to(self.device)
         self.model.to(self.device)
@@ -119,7 +139,7 @@ class MHAttKWSLearner():
             os.mkdir(save_path)
 
         for epoch in range(n_epochs):
-            train_loss, train_acc = self._train(train_dataloader, optimizer, criterion, epoch)
+            train_loss, train_acc = self._train(train_dataloader, optimizer, criterion, model_type)
 
             print_free_style(
                 message=f"Epoch {epoch + 1}/{n_epochs}: \n" 
@@ -134,10 +154,12 @@ class MHAttKWSLearner():
                         'epoch': epoch,
                         'model_state_dict': self.model.state_dict(),
                         'optimizer_state_dict': optimizer.state_dict(),
+                        'classes': self.classes,
                         # 'loss': train_loss,
                     }, 
                     os.path.join(save_path, f"{model_name}.pt")
                 )
+                print_free_style(f"Save the best model!")
             else:
                 step += 1
                 if step >= max_steps:
@@ -145,7 +167,30 @@ class MHAttKWSLearner():
 
         print_notice_style(message=f"Path to the saved model: {save_path}/{model_name}.pt")
 
-    def inference(self, input):
+    def inference(self, input: Union[str, Any]):
         """Inference a given sample. """
 
         pass
+
+    def load_model(self, model_path):
+        """Load the pretrained model
+
+        :param model_path: The path to the pretrained model
+        """
+        # Check the model file exists
+        if not os.path.isfile(model_path):
+            raise ValueError(f"The model file `{model_path}` is not exists or broken!")
+
+        checkpoint = torch.load(model_path)
+        self.classes = checkpoint['classes']
+        self.model.load_state_dict(checkpoint['model_state_dict'])
+        self.model.to(self.device)
+
+
+def get_build_criterion(model_type):
+    return get_from_registry(model_type, criterion_registry)
+
+criterion_registry = {
+    'binary': nn.BCEWithLogitsLoss(),
+    'multi_class': nn.CrossEntropyLoss()
+}
