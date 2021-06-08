@@ -76,9 +76,40 @@ class MHAttKWSLearner():
     def _validate(
         self,
         valid_dataloader,
-        criterion=None
+        criterion=None,
+        model_type='binary'
     ):
         self.model.eval()
+
+        valid_loss = []
+        total_sample =0 
+        correct = 0
+
+        with torch.no_grad():
+            for item in tqdm(valid_dataloader):
+                x, y = item
+                x = x.to(self.device)
+                y = y.to(self.device).float()
+                
+                output = self.model(x).squeeze(-1) if model_type == 'binary' else self.model(x)
+
+                if criterion:
+                    loss = criterion(output, y)
+                    valid_loss.append(loss.item())
+                
+                total_sample += y.size(0)
+
+                if type == 'multi_class':
+                    pred = output.data.max(1, keepdim=True)[1]
+                    correct += pred.eq(y.data.view_as(pred)).sum()
+                else:
+                    pred = (torch.sigmoid(output) >= 0.5).long()
+                    correct += (pred == y).sum().item()
+         
+        loss = np.mean(valid_loss)
+        acc = correct / total_sample
+        
+        return loss, acc
 
 
     def train(
@@ -98,6 +129,10 @@ class MHAttKWSLearner():
         model_name: str='mhatt_model',
         **kwargs
     ):
+        print_line("Dataset Info")
+        print(f"Length of Training dataset: {len(train_dataset)}")
+        print(f"Length of Test dataset: {len(test_dataset)} \n")
+
         train_dataloader = DataLoader(
             train_dataset, batch_size=batch_size, shuffle=shuffle,
             pin_memory=True, collate_fn=_collate_fn, num_workers=num_workers
@@ -140,14 +175,16 @@ class MHAttKWSLearner():
 
         for epoch in range(n_epochs):
             train_loss, train_acc = self._train(train_dataloader, optimizer, criterion, model_type)
+            valid_loss, valid_acc = self._validate(test_dataloader, criterion, model_type)
 
             print_free_style(
                 message=f"Epoch {epoch + 1}/{n_epochs}: \n" 
                         f"\t- Train: loss = {train_loss:.4f}; acc = {train_acc:.4f} \n"
+                        f"\t- Valid: loss = {valid_loss:.4f}; acc = {valid_acc:.4f} \n"
             )
 
-            if train_acc > best_acc:
-                best_acc = train_acc
+            if valid_acc > best_acc:
+                best_acc = valid_acc
                 step = 0
                 torch.save(
                     {
