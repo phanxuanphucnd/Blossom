@@ -30,7 +30,7 @@ Blossom is a library for Wake-up word detection problem use Multihead attention 
 
 ```
 
-### <a name='data_structrue'></a> Data Structure
+### <a name='data_structure'></a> Data Structure
 
 ```
 data
