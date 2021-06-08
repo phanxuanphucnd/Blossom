@@ -145,4 +145,4 @@ test_inference()
 - Name: Phan Xuan Phuc
 - Email: phanxuanphucnd@gmail.com
 
-_(To request sample data for experiment. Please contact by email phanxuanphucnd@gmail. )_
+_(To request sample data for experiment. Please contact by my email. )_
