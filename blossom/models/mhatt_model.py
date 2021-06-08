@@ -22,7 +22,7 @@ class MHAttKWS(nn.Module):
             nn.BatchNorm2d(10),
             nn.ReLU(inplace=True),
             nn.Conv2d(10, 1, (5, 1), stride=(1, 1), dilation=(1, 1)),
-            nn.BatchNorm2d(45),
+            nn.BatchNorm2d(1),
             nn.ReLU(inplace=True),
             nn.AvgPool2d(2)
         )

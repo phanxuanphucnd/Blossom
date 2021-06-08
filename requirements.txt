@@ -1,4 +1,4 @@
-librosa<0.8
+librosa~=0.7.2
 numba==0.48
 torch~=1.7.1
 numpy

@@ -37,24 +37,23 @@ class MHAttKWSLearner():
     ):
         self.model.train()
 
-        pbar = tqdm(train_dataloader)
-        total_loss = []
+        train_loss = []
         total_sample = 0
         correct = 0
-        cur_step = 0
-        print_step = 10
         
         logging.info(f"[Training]Training start")
-        for batch in pbar:
-            optimizer.zero_grad()
+        for batch in tqdm(train_dataloader):
             x, y = batch
             x = x.to(self.device)
             y = y.to(self.device)
 
+
+            optimizer.zero_grad()
+
             logits = self.model(x)
             loss = criterion(logits, y)
             
-            total_loss += loss.item()
+            train_loss.append(loss.item())
             total_sample += y.size(0)
 
             pred = logits.data.max(1, keepdim=True)[1]
@@ -62,16 +61,8 @@ class MHAttKWSLearner():
 
             loss.backward()
             optimizer.step()
-            cur_step += 1
-            
-            pbar.set_description("loss: {}\tacc:{}\t".format(sum(total_loss)/cur_step, (correct/total_sample)*100))
-
-            if cur_step % print_step == 0:
-                logging.info(
-                    f"[Training]Epoch {epoch}\tloss: {total_loss/cur_step}\tacc: {correct/total_sample}"
-                )
-        
-        loss = np.mean(total_loss)
+           
+        loss = np.mean(train_loss)
         acc = correct / total_sample
 
         return loss, acc
