@@ -37,7 +37,7 @@ def test_train():
         eps=1e-8,
         betas=(0.9, 0.999),
         max_steps=5,
-        n_epochs=2,
+        n_epochs=10,
         shuffle=True,
         num_workers=8,
         view_model=True,

@@ -13,9 +13,15 @@ class MHAttKWS(nn.Module):
     ):
         super(MHAttKWS, self).__init__()
 
-        self.num_classes = num_classes
         self.n_head = n_head
         self.hidden_dim = hidden_dim
+        self.num_classes = num_classes
+        
+        if self.num_classes == 2:
+            output_dim = 1
+        else:
+            output_dim = self.num_classes
+        
 
         self.cnn_extractor = nn.Sequential(
             nn.Conv2d(in_channel, 10, (5, 1), stride=(1, 1), dilation=(1, 1)),

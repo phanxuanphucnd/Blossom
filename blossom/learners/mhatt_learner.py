@@ -12,7 +12,7 @@ from blossom.models import MHAttKWS
 from blossom.utils.print_util import *
 from blossom.datasets import MHAttDataset, _collate_fn
 
-logging.basicConfig(filename='log.log',level=logging.INFO)
+# logging.basicConfig(filename='log.log',level=logging.INFO)
 
 class MHAttKWSLearner():
     def __init__(
@@ -41,7 +41,7 @@ class MHAttKWSLearner():
         total_sample = 0
         correct = 0
         
-        logging.info(f"[Training]Training start")
+        # logging.info(f"[Training]Training start")
         for batch in tqdm(train_dataloader):
             x, y = batch
             x = x.to(self.device)

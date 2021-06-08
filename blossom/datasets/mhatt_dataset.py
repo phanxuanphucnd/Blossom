@@ -3,12 +3,12 @@ import torch
 import librosa
 import numpy as np
 
-from typing import List, Union, Any
+from typing import List, Union, Any, Dict
 from torch.utils.data.dataset import Dataset
 
 
 class MHAttDataset(Dataset):
-    def __init__(self, mode: str='train', root: str=None, classes: List=None) -> None:
+    def __init__(self, mode: str='train', root: str=None, classes: Dict=None) -> None:
         super(MHAttDataset, self).__init__()
 
         self.root = os.path.join(root, mode)
@@ -17,10 +17,13 @@ class MHAttDataset(Dataset):
         if classes:
             self.classes = classes
         else:
-            self.classes = []
+            self.classes = {}
             for _, dir, _ in os.walk(self.root):
-                self.classes = dir
+                classes = dir
                 break
+                
+            for i, cl in enumerate(classes):
+                self.classes[cl] = i
 
         self.prep_dataset()
 
@@ -33,7 +36,7 @@ class MHAttDataset(Dataset):
     def __getitem__(self, idx):
         f_path, cmd = self.data[idx]
         x = self.transform(f_path)
-        y = self.classes.index(cmd)
+        y = self.classes.get(cmd, None)
 
         return x, y
 
