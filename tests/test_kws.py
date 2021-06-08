@@ -37,7 +37,7 @@ def test_train():
         eps=1e-8,
         betas=(0.9, 0.999),
         max_steps=5,
-        n_epochs=10,
+        n_epochs=1,
         shuffle=True,
         num_workers=8,
         view_model=True,
@@ -45,4 +45,22 @@ def test_train():
         model_name='mhatt_model'
     )
     
-test_train()
+# test_train()
+
+
+def test_inference():
+    model = MHAttKWS(
+        num_classes=2,
+        in_channel=1,
+        hidden_dim=128,
+        n_head=4,
+        dropout=0.1
+    )
+
+    learner = MHAttKWSLearner(model=model)
+    learner.load_model(model_path='./models/mhatt_model_1.pt')
+
+    learner.inference(input='data/trigger/processed/test/active/0b57a6ed_nohash_0.wav')
+
+
+test_inference()

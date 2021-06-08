@@ -25,9 +25,9 @@ class MHAttDataset(Dataset):
             for i, cl in enumerate(classes):
                 self.classes[cl] = i
 
-        self.prep_dataset()
+        self.prep_dataset(mode)
 
-    def prep_dataset(self):
+    def prep_dataset(self, mode):
         for root, dir, files in os.walk(self.root):
             for file in files:
                 f_path, cmd = os.path.join(root, file), root.split('/')[-1]

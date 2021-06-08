@@ -49,7 +49,7 @@ class MHAttKWSLearner():
             x, y = item
             x = x.to(self.device)
             y = y.to(self.device).float()
-            
+
             optimizer.zero_grad()
 
             output = self.model(x).squeeze(-1) if model_type == 'binary' else self.model(x)
@@ -61,7 +61,7 @@ class MHAttKWSLearner():
             train_loss.append(loss.item())
             total_sample += y.size(0)
 
-            if type == 'multi_class':
+            if model_type == 'multi_class':
                 pred = output.data.max(1, keepdim=True)[1]
                 correct += pred.eq(y.data.view_as(pred)).sum()
             else:
@@ -99,7 +99,7 @@ class MHAttKWSLearner():
                 
                 total_sample += y.size(0)
 
-                if type == 'multi_class':
+                if model_type == 'multi_class':
                     pred = output.data.max(1, keepdim=True)[1]
                     correct += pred.eq(y.data.view_as(pred)).sum()
                 else:
@@ -143,13 +143,17 @@ class MHAttKWSLearner():
         )
 
         if self.num_classes == 2:
-            model_type = 'binary'
+            self.model_type = 'binary'
         else:
-            model_type = 'multi_class'
+            self.model_type = 'multi_class'
 
-        self.classes = train_dataset.classes
+        self.label2idx = train_dataset.classes
+        
+        self.idx2label = {}
+        for k, v in self.label2idx.items():
+            self.idx2label[v] = k
 
-        criterion = get_build_criterion(model_type=model_type)
+        criterion = get_build_criterion(model_type=self.model_type)
         optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
 
         criterion.to(self.device)
@@ -174,8 +178,8 @@ class MHAttKWSLearner():
             os.mkdir(save_path)
 
         for epoch in range(n_epochs):
-            train_loss, train_acc = self._train(train_dataloader, optimizer, criterion, model_type)
-            valid_loss, valid_acc = self._validate(test_dataloader, criterion, model_type)
+            train_loss, train_acc = self._train(train_dataloader, optimizer, criterion, self.model_type)
+            valid_loss, valid_acc = self._validate(test_dataloader, criterion, self.model_type)
 
             print_free_style(
                 message=f"Epoch {epoch + 1}/{n_epochs}: \n" 
@@ -191,7 +195,9 @@ class MHAttKWSLearner():
                         'epoch': epoch,
                         'model_state_dict': self.model.state_dict(),
                         'optimizer_state_dict': optimizer.state_dict(),
-                        'classes': self.classes,
+                        'label2idx': self.label2idx,
+                        'idx2label': self.idx2label,
+                        'model_type': self.model_type,
                         # 'loss': train_loss,
                     }, 
                     os.path.join(save_path, f"{model_name}.pt")
@@ -207,7 +213,25 @@ class MHAttKWSLearner():
     def inference(self, input: Union[str, Any]):
         """Inference a given sample. """
 
-        pass
+        _input = transform(path=input, sr=16000)
+        F, T = _input.shape
+
+        x = torch.zeros(1, F, len(_input[0]))
+        x[0, :, :] = _input
+        x = x.unsqueeze(1)
+        
+        x = x.to(self.device)
+        
+        with torch.no_grad():
+            output = self.model(x)
+        
+        if self.model_type == 'multi_class':
+            pred = output.data.max(1, keepdim=True)[1]
+        else:
+            pred = torch.sigmoid(output) >= 0.5
+
+        print('PRED : ', pred)
+        return pred
 
     def load_model(self, model_path):
         """Load the pretrained model
@@ -219,7 +243,9 @@ class MHAttKWSLearner():
             raise ValueError(f"The model file `{model_path}` is not exists or broken!")
 
         checkpoint = torch.load(model_path)
-        self.classes = checkpoint['classes']
+        self.model_type = checkpoint['model_type']
+        self.label2idx = checkpoint['label2idx']
+        self.idx2label = checkpoint['idx2label']
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.model.to(self.device)
 
