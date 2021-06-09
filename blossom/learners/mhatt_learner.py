@@ -7,6 +7,7 @@ import torch.nn as nn
 from tqdm import tqdm
 from typing import Any, Union, Tuple
 from torch.utils.data import DataLoader
+from sklearn.metrics import confusion_matrix, classification_report
 
 from blossom.models import MHAttKWS
 from blossom.utils.data_util import *
@@ -43,6 +44,9 @@ class MHAttKWSLearner():
         train_loss = []
         total_sample = 0
         correct = 0
+
+        labels = []
+        preds = []
         
         # logging.info(f"[Training]Training start")
         for item in tqdm(train_dataloader):
@@ -67,6 +71,9 @@ class MHAttKWSLearner():
             else:
                 pred = (torch.sigmoid(output) >= 0.5).long()
                 correct += (pred == y).sum().item()
+            
+            labels.extend(y.view(-1).data.cpu().numpy())
+            preds.extend(pred.view(-1).data.cpu().numpy())
            
         loss = np.mean(train_loss)
         acc = correct / total_sample
@@ -209,6 +216,77 @@ class MHAttKWSLearner():
                     break
 
         print_notice_style(message=f"Path to the saved model: {save_path}/{model_name}.pt")
+
+    def evaluate(
+        self,
+        test_dataset: MHAttDataset=None,
+        batch_size: int=48,
+        num_workers: int=8,
+        criterion: Any=None,
+        model_type: str='binary',
+        view_classification_report: bool=True
+    ):
+        test_dataloader = DataLoader(
+            test_dataset, batch_size=batch_size, shuffle=False,
+            pin_memory=True, collate_fn=_collate_fn, num_workers=num_workers
+        )
+
+        self.model.eval()
+
+        valid_loss = []
+        total_sample =0 
+        correct = 0
+
+        labels = []
+        preds = []
+
+        print_line(text="Evaluate the model")
+
+        with torch.no_grad():
+            for item in tqdm(test_dataloader):
+                x, y = item
+                x = x.to(self.device)
+                y = y.to(self.device).float()
+                
+                output = self.model(x).squeeze(-1) if model_type == 'binary' else self.model(x)
+
+                if criterion:
+                    loss = criterion(output, y)
+                    valid_loss.append(loss.item())
+                
+                total_sample += y.size(0)
+
+                if model_type == 'multi_class':
+                    pred = output.data.max(1, keepdim=True)[1]
+                    correct += pred.eq(y.data.view_as(pred)).sum()
+                else:
+                    pred = (torch.sigmoid(output) >= 0.5).long()
+                    correct += (pred == y).sum().item()
+
+                labels.extend(y.view(-1).data.cpu().numpy())
+                preds.extend(pred.view(-1).data.cpu().numpy())
+         
+        loss = np.mean(valid_loss)
+        acc = correct / total_sample
+
+        labels = [self.idx2label.get(i) for i in labels]
+        preds = [self.idx2label.get(i) for i in preds]
+        classes = list(self.label2idx.keys())
+
+        cm = confusion_matrix(y_true=labels, y_pred=preds, labels=classes)
+        report = classification_report(y_true=labels, y_pred=preds, labels=classes)
+
+        # View classification report
+        if view_classification_report:
+            print(report)
+
+        # Save confusion matrix image
+        try:
+            plot_confusion_matrix(cm, target_names=classes, title="confustion_matrix", save_dir='./evaluation')
+        except Exception as e:
+            print(f"Warning: {e}")
+        
+        return loss, acc
 
     def inference(self, input: Union[str, Any]):
         """Inference a given sample. """
